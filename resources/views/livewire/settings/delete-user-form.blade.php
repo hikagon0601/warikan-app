@@ -16,6 +16,13 @@ new class extends Component {
             'password' => ['required', 'string', 'current_password'],
         ]);
 
+        // 割り勘グループに入っている人は削除できない（支払いの記録が合わなくなるため）
+        if (Auth::user()->groups()->exists()) {
+            $this->addError('password', '割り勘グループのメンバーになっているため、アカウントを削除できません。');
+
+            return;
+        }
+
         tap(Auth::user(), $logout(...))->delete();
 
         $this->redirect('/', navigate: true);

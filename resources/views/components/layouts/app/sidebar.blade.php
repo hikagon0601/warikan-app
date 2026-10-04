@@ -14,7 +14,7 @@
             <flux:navlist variant="outline">
                 <flux:navlist.group heading="Platform" class="grid">
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>マイページ</flux:navlist.item>
-                    <flux:navlist.item icon="calendar" :href="route('events.index')" :current="request()->routeIs('events.*')" wire:navigate>飲み会</flux:navlist.item>
+                    <flux:navlist.item icon="wallet" :href="route('groups.index')" :current="request()->routeIs('groups.*')" wire:navigate>割り勘</flux:navlist.item>
                 </flux:navlist.group>
             </flux:navlist>
 

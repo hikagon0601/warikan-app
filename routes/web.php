@@ -2,10 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
-use App\Http\Controllers\EventController;
-use App\Http\Controllers\ParticipationController;
-use App\Http\Controllers\CommentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GroupController;
+use App\Http\Controllers\MemberController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\SettlementController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -24,19 +25,20 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth'])->group(function () {
-    // イベントのCRUD（index, create, store, show, edit, update, destroy）
-    Route::resource('events', EventController::class);
-    
-    // 参加する / やめる / 支払い済みの切り替え
-    Route::post('events/{event}/join', [ParticipationController::class, 'store'])->name('events.join');
-    Route::delete('events/{event}/join', [ParticipationController::class, 'destroy'])->name('events.leave');
-    Route::patch('events/{event}/participants/{user}/paid', [ParticipationController::class, 'togglePaid'])->name('events.paid');
+    // 割り勘グループのCRUD
+    Route::resource('groups', GroupController::class);
 
-    // コメント
-    Route::post('events/{event}/comments', [CommentController::class, 'store'])->name('comments.store');
-    Route::delete('events/{event}/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+    // メンバーの追加 / 外す
+    Route::post('groups/{group}/members', [MemberController::class, 'store'])->name('groups.members.store');
+    Route::delete('groups/{group}/members/{user}', [MemberController::class, 'destroy'])->name('groups.members.destroy');
+
+    // 支払いの記録
+    Route::get('groups/{group}/payments/create', [PaymentController::class, 'create'])->name('groups.payments.create');
+    Route::post('groups/{group}/payments', [PaymentController::class, 'store'])->name('groups.payments.store');
+    Route::delete('groups/{group}/payments/{payment}', [PaymentController::class, 'destroy'])->name('groups.payments.destroy');
+
+    // 精算した記録
+    Route::post('groups/{group}/settlements', [SettlementController::class, 'store'])->name('groups.settlements.store');
 });
-
-
 
 require __DIR__.'/auth.php';

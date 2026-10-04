@@ -5,61 +5,92 @@
         {{-- 上段：数字のカード3枚 --}}
         <div class="grid gap-4 md:grid-cols-3">
             <flux:card>
-                <flux:text>次の飲み会</flux:text>
-                @if ($nextEvent)
-                    <a href="{{ route('events.show', $nextEvent) }}" class="mt-2 block hover:underline">
-                        <div class="text-2xl font-bold">{{ $nextEvent->date->format('n/j') }}</div>
-                        <div class="font-semibold">{{ $nextEvent->title }}</div>
-                    </a>
-                    <flux:text class="mt-1">
-                        {{ $nextEvent->meeting_time ? substr($nextEvent->meeting_time, 0, 5) : '時間未定' }} ・ {{ $nextEvent->place }}
-                    </flux:text>
-                @else
-                    <div class="mt-2 text-zinc-500">予定はありません</div>
-                @endif
+                <flux:text>払う</flux:text>
+                <div class="mt-2 text-2xl font-bold text-red-600">{{ number_format($payTotal) }}円</div>
+                <flux:text class="mt-1">{{ count($toPay) }}件の精算</flux:text>
             </flux:card>
 
             <flux:card>
-                <flux:text>未払い</flux:text>
-                <div class="mt-2 text-2xl font-bold">{{ number_format($unpaidTotal) }}円</div>
-                <flux:text class="mt-1">{{ $unpaidEvents->count() }}件</flux:text>
+                <flux:text>受け取る</flux:text>
+                <div class="mt-2 text-2xl font-bold text-green-600">{{ number_format($receiveTotal) }}円</div>
+                <flux:text class="mt-1">{{ count($toReceive) }}件の精算</flux:text>
             </flux:card>
 
             <flux:card>
-                <flux:text>幹事をする会</flux:text>
-                <div class="mt-2 text-2xl font-bold">{{ $organizingCount }}件</div>
-                <flux:text class="mt-1">今日以降の会</flux:text>
+                <flux:text>グループ</flux:text>
+                <div class="mt-2 text-2xl font-bold">{{ $groups->count() }}件</div>
+                <flux:text class="mt-1">入っている割り勘グループ</flux:text>
             </flux:card>
         </div>
 
-        {{-- 下段：参加予定のリスト --}}
-        <div>
-            <flux:heading size="lg">参加予定</flux:heading>
+        {{-- 中段：自分が関わる精算 --}}
+        <div class="grid gap-6 md:grid-cols-2">
+            <div>
+                <flux:heading size="lg">あなたが払う</flux:heading>
+                <ul class="mt-3 divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-700 dark:border-zinc-700">
+                    @forelse ($toPay as $row)
+                        <li>
+                            <a href="{{ route('groups.show', $row['group']) }}" class="flex items-center justify-between p-4 hover:bg-zinc-50 dark:hover:bg-zinc-700">
+                                <div>
+                                    <div class="font-semibold">{{ $row['name'] }}さんへ</div>
+                                    <div class="text-sm text-zinc-500">{{ $row['group']->name }}</div>
+                                </div>
+                                <span class="font-semibold text-red-600">{{ number_format($row['amount']) }}円</span>
+                            </a>
+                        </li>
+                    @empty
+                        <li class="p-4 text-zinc-500">払う精算はありません。</li>
+                    @endforelse
+                </ul>
+            </div>
 
+            <div>
+                <flux:heading size="lg">あなたが受け取る</flux:heading>
+                <ul class="mt-3 divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-700 dark:border-zinc-700">
+                    @forelse ($toReceive as $row)
+                        <li>
+                            <a href="{{ route('groups.show', $row['group']) }}" class="flex items-center justify-between p-4 hover:bg-zinc-50 dark:hover:bg-zinc-700">
+                                <div>
+                                    <div class="font-semibold">{{ $row['name'] }}さんから</div>
+                                    <div class="text-sm text-zinc-500">{{ $row['group']->name }}</div>
+                                </div>
+                                <span class="font-semibold text-green-600">{{ number_format($row['amount']) }}円</span>
+                            </a>
+                        </li>
+                    @empty
+                        <li class="p-4 text-zinc-500">受け取る精算はありません。</li>
+                    @endforelse
+                </ul>
+            </div>
+        </div>
+
+        {{-- 下段：グループごとの自分の残高 --}}
+        <div>
+            <flux:heading size="lg">グループ</flux:heading>
             <div class="mt-3 divide-y divide-zinc-200 rounded-lg border border-zinc-200 dark:divide-zinc-700 dark:border-zinc-700">
-                @forelse ($upcomingEvents as $event)
-                    <a href="{{ route('events.show', $event) }}"
+                @forelse ($groups as $group)
+                    @php $balance = $myBalances[$group->id]; @endphp
+                    <a href="{{ route('groups.show', $group) }}"
                        class="flex items-center justify-between gap-4 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-700">
                         <div>
-                            <div class="font-semibold">{{ $event->date->format('n/j') }} {{ $event->title }}</div>
-                            <div class="text-sm text-zinc-500">{{ $event->place }}</div>
+                            <div class="font-semibold">{{ $group->name }}</div>
+                            <div class="text-sm text-zinc-500">メンバー {{ $group->members->count() }}人</div>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <span>{{ number_format(App\Models\Event::splitEvenly($event->total_amount, $event->participants_count)) }}円</span>
-                            @if ($event->pivot->paid)
-                                <flux:badge color="green" size="sm">支払い済み</flux:badge>
-                            @else
-                                <flux:badge color="zinc" size="sm">未払い</flux:badge>
-                            @endif
-                        </div>
+                        @if ($balance > 0)
+                            <flux:badge color="green" size="sm">{{ number_format($balance) }}円 受け取る</flux:badge>
+                        @elseif ($balance < 0)
+                            <flux:badge color="red" size="sm">{{ number_format(-$balance) }}円 払う</flux:badge>
+                        @else
+                            <flux:badge color="zinc" size="sm">精算済み</flux:badge>
+                        @endif
                     </a>
                 @empty
-                    <p class="p-4 text-zinc-500">参加予定の飲み会はありません。</p>
+                    <p class="p-4 text-zinc-500">まだグループに入っていません。</p>
                 @endforelse
             </div>
 
             <div class="mt-3 text-right">
-                <flux:link :href="route('events.index')" wire:navigate>飲み会一覧へ →</flux:link>
+                <flux:link :href="route('groups.create')" wire:navigate>グループを作る →</flux:link>
             </div>
         </div>
     </div>

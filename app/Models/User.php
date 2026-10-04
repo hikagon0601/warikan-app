@@ -59,22 +59,16 @@ class User extends Authenticatable // implements MustVerifyEmail
             ->map(fn (string $name) => Str::of($name)->substr(0, 1))
             ->implode('');
     }
-        // 自分が幹事のイベント
-    public function organizedEvents(): HasMany
+
+    // 自分が作ったグループ
+    public function ownedGroups(): HasMany
     {
-        return $this->hasMany(Event::class);
+        return $this->hasMany(Group::class, 'owner_id');
     }
 
-    // 自分が参加するイベント（多対多）
-    public function joinedEvents(): BelongsToMany
+    // 自分が入っているグループ（多対多）
+    public function groups(): BelongsToMany
     {
-        return $this->belongsToMany(Event::class)
-            ->withPivot('paid')
-            ->withTimestamps();
-    }
-
-    public function comments(): HasMany
-    {
-        return $this->hasMany(Comment::class);
+        return $this->belongsToMany(Group::class)->withTimestamps();
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Event;
+use App\Support\Settlement;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -12,37 +12,42 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        // 参加予定（今日以降・日付が近い順）
-        $upcomingEvents = $user->joinedEvents()
-            ->withCount('participants')
-            ->where('date', '>=', today())
-            ->orderBy('date')
+        // 自分が入っているグループ（残高の計算に使うデータもまとめて読み込む）
+        $groups = $user->groups()
+            ->with(['members', 'payments.beneficiaries'])
+            ->latest()
             ->get();
 
-        // 次の飲み会（参加予定の先頭）
-        $nextEvent = $upcomingEvents->first();
+        $myBalances = []; // [group_id => 自分の残高]
+        $toPay = [];      // 自分が払う精算
+        $toReceive = [];  // 自分が受け取る精算
 
-        // 未払い（過去の会も、幹事の会も含める）
-        $unpaidEvents = $user->joinedEvents()
-            ->withCount('participants')
-            ->wherePivot('paid', false)
-            ->get();
+        foreach ($groups as $group) {
+            $balances = $group->balances();
+            $names = $group->members->pluck('name', 'id');
 
-        $unpaidTotal = $unpaidEvents->sum(
-            fn (Event $event) => Event::splitEvenly($event->total_amount, $event->participants_count)
-        );
+            $myBalances[$group->id] = $balances[$user->id];
 
-        // 幹事をする会（今日以降）
-        $organizingCount = $user->organizedEvents()
-            ->where('date', '>=', today())
-            ->count();
+            foreach (Settlement::transfers($balances) as $transfer) {
+                if ($transfer['from'] === $user->id) {
+                    $toPay[] = ['group' => $group, 'name' => $names[$transfer['to']], 'amount' => $transfer['amount']];
+                }
+                if ($transfer['to'] === $user->id) {
+                    $toReceive[] = ['group' => $group, 'name' => $names[$transfer['from']], 'amount' => $transfer['amount']];
+                }
+            }
+        }
+
+        $payTotal = array_sum(array_column($toPay, 'amount'));
+        $receiveTotal = array_sum(array_column($toReceive, 'amount'));
 
         return view('dashboard', compact(
-            'upcomingEvents',
-            'nextEvent',
-            'unpaidEvents',
-            'unpaidTotal',
-            'organizingCount',
+            'groups',
+            'myBalances',
+            'toPay',
+            'toReceive',
+            'payTotal',
+            'receiveTotal',
         ));
     }
 }
