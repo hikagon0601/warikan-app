@@ -45,6 +45,19 @@ class EventTest extends TestCase
         $this->assertFalse($event->participants()->where('user_id', $user->id)->exists());
     }
 
+    public function test_幹事は参加をやめられない(): void
+    {
+        $event = Event::factory()->create();
+        $event->participants()->attach($event->user_id);
+
+        $this->actingAs($event->user)->delete(route('events.leave', $event))->assertForbidden();
+        $this->assertTrue($event->participants()->where('user_id', $event->user_id)->exists());
+
+        $this->actingAs($event->user)->get(route('events.show', $event))
+            ->assertSee('幹事は参加をやめられません')
+            ->assertDontSee('参加をやめる');
+    }
+
     public function test_幹事以外は編集できない(): void
     {
         $event = Event::factory()->create();

@@ -19,6 +19,9 @@ class ParticipationController extends Controller
     // 参加をやめる
     public function destroy(Request $request, Event $event)
     {
+        // 幹事は参加をやめられない
+        abort_if($event->user_id === $request->user()->id, 403);
+
         $event->participants()->detach($request->user()->id);
 
         return back();

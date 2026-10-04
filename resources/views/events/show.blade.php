@@ -31,7 +31,9 @@
 
         {{-- 参加ボタン --}}
         <div>
-            @if ($isJoined)
+            @if ($isJoined && $isOrganizer)
+                <flux:text>幹事は参加をやめられません</flux:text>
+            @elseif ($isJoined)
                 <form method="POST" action="{{ route('events.leave', $event) }}">
                     @csrf
                     @method('DELETE')

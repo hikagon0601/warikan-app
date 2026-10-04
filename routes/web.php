@@ -5,12 +5,13 @@ use Livewire\Volt\Volt;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\ParticipationController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\DashboardController;
 
 Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
-Route::view('dashboard', 'dashboard')
+Route::get('dashboard', DashboardController::class)
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
